@@ -31,8 +31,8 @@ INSTRUCTIONAL_HTML = """
         }
         .top-circle {
             position: absolute;
-            top: 4px;
-            right: 4px;
+            top: -8px;
+            right: 2px;
             width: 72px;
             height: 72px;
             background: #ff69b4;
@@ -66,7 +66,7 @@ INSTRUCTIONAL_HTML = """
             color: #000000;
             font-weight: bold;
             line-height: 1;
-            transform: rotate(-38deg);
+            transform: rotate(-69deg);
         }
         .content {
             position: relative;
