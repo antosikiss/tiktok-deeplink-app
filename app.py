@@ -176,7 +176,7 @@ def root():
     if is_tiktok_inapp(user_agent):
         return INSTRUCTIONAL_HTML
     else:
-        return redirect('https://link.me/ffionamorgan0')
+        return redirect('https://www.fanvue.com/fiona.morgan')
 
 
 # Keep the dynamic route in case you ever use other usernames
@@ -186,7 +186,7 @@ def handle_request(username):
     if is_tiktok_inapp(user_agent):
         return INSTRUCTIONAL_HTML
     else:
-        return redirect('https://link.me/ffionamorgan0')
+        return redirect('https://www.fanvue.com/fiona.morgan')
 
 
 if __name__ == '__main__':
