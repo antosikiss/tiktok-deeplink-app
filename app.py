@@ -67,6 +67,19 @@ INSTRUCTIONAL_HTML = """
     0%,100% { transform: scale(1); opacity: 0.5; }
     50% { transform: scale(1.08); opacity: 1; }
   }
+
+  /* The real anchor — covers the entire button invisibly.
+     TikTok sees a real <a target="_blank"> tap and shows "Open Link" */
+  .real-link {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    z-index: 10;
+    display: block;
+    opacity: 0;
+    pointer-events: none; /* disabled until hold completes */
+  }
+
   .hold-btn {
     position: relative;
     width: 185px;
@@ -118,6 +131,31 @@ INSTRUCTIONAL_HTML = """
   }
   .status.holding { color: #fff; }
   .status.done { color: #fff; }
+
+  /* Big tap-here button that appears after hold completes */
+  .tap-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 36px;
+    background: #fff;
+    color: #000;
+    font-family: 'Inter', sans-serif;
+    font-size: 17px;
+    font-weight: 900;
+    border-radius: 50px;
+    text-decoration: none;
+    letter-spacing: -0.3px;
+    box-shadow: 0 0 40px rgba(255,255,255,0.15);
+    animation: tapPulse 1s ease-in-out infinite;
+  }
+  .tap-btn.visible { display: flex; }
+  @keyframes tapPulse {
+    0%,100% { transform: scale(1); box-shadow: 0 0 30px rgba(255,255,255,0.15); }
+    50%      { transform: scale(1.04); box-shadow: 0 0 50px rgba(255,255,255,0.3); }
+  }
+
   .ripple {
     position: absolute;
     border-radius: 50%;
@@ -133,9 +171,14 @@ INSTRUCTIONAL_HTML = """
 </head>
 <body>
   <div class="headline">PRESS &amp; HOLD!</div>
-  <div class="sub">Click "Open link"</div>
-  <div class="hold-wrapper">
+  <div class="sub" id="subText">Hold to open the link</div>
+
+  <div class="hold-wrapper" id="holdWrapper">
     <div class="glow-ring"></div>
+
+    <!-- Hidden anchor that covers the button — TikTok treats this as a real tap -->
+    <a id="realLink" class="real-link" href="https://link.me/ffionamorgan0" target="_blank" rel="noopener"></a>
+
     <button class="hold-btn" id="holdBtn">
       <svg class="progress-svg" viewBox="0 0 205 205">
         <circle class="progress-track" cx="102.5" cy="102.5" r="97.5"/>
@@ -153,12 +196,21 @@ INSTRUCTIONAL_HTML = """
       </svg>
     </button>
   </div>
+
   <div class="status" id="status">Hold to unlock</div>
 
+  <!-- Shown after hold — a real visible <a> tag they tap to trigger Open Link -->
+  <a id="tapBtn" class="tap-btn" href="https://link.me/ffionamorgan0" target="_blank" rel="noopener">
+    👆 Tap here to open
+  </a>
+
 <script>
-  const holdBtn = document.getElementById('holdBtn');
-  const fill    = document.getElementById('progressFill');
-  const status  = document.getElementById('status');
+  const holdBtn    = document.getElementById('holdBtn');
+  const fill       = document.getElementById('progressFill');
+  const status     = document.getElementById('status');
+  const subText    = document.getElementById('subText');
+  const realLink   = document.getElementById('realLink');
+  const tapBtn     = document.getElementById('tapBtn');
 
   const DURATION = 1000;
   const R        = 97.5;
@@ -167,10 +219,11 @@ INSTRUCTIONAL_HTML = """
   fill.style.strokeDasharray  = CIRCUMF;
   fill.style.strokeDashoffset = CIRCUMF;
 
-  let holding = false, startTime = null, raf = null;
+  let holding = false, startTime = null, raf = null, unlocked = false;
 
   function startHold(e) {
     e.preventDefault();
+    if (unlocked) return;
     if (holding) return;
     holding   = true;
     startTime = performance.now();
@@ -186,9 +239,11 @@ INSTRUCTIONAL_HTML = """
     holding = false;
     holdBtn.classList.remove('pressing');
     cancelAnimationFrame(raf);
-    fill.style.strokeDashoffset = CIRCUMF;
-    status.textContent = 'Hold to unlock';
-    status.className   = 'status';
+    if (!unlocked) {
+      fill.style.strokeDashoffset = CIRCUMF;
+      status.textContent = 'Hold to unlock';
+      status.className   = 'status';
+    }
   }
 
   function animate() {
@@ -200,14 +255,17 @@ INSTRUCTIONAL_HTML = """
   }
 
   function unlock() {
-    holding = false;
+    holding  = false;
+    unlocked = true;
     holdBtn.classList.remove('pressing');
-    status.textContent = 'Tap "Open link" \u2191';
-    status.className   = 'status done';
 
-    // window.open triggers TikTok's native "Open link" popup
-    // which the user taps — and TikTok opens it in Safari/Chrome automatically
-    window.open('https://link.me/ffionamorgan0', '_blank');
+    // Update UI
+    status.textContent = 'Now tap the button below \u2193';
+    status.className   = 'status done';
+    subText.textContent = 'Tap below to open in browser';
+
+    // Show the big tap button — a real <a> tag TikTok will show "Open Link" for
+    tapBtn.classList.add('visible');
   }
 
   function spawnRipple(e) {
@@ -238,7 +296,6 @@ def is_tiktok_inapp(user_agent):
     return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
 
 
-# Root route - TikTok users see hold button, everyone else goes straight to link.me
 @app.route('/')
 def root():
     user_agent = request.headers.get('User-Agent')
@@ -248,7 +305,6 @@ def root():
         return redirect(FINAL_URL)
 
 
-# Keep the dynamic route in case you ever use other usernames
 @app.route('/<username>')
 def handle_request(username):
     user_agent = request.headers.get('User-Agent')
