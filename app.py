@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, Response
+from flask import Flask, request, redirect
 import os
 
 app = Flask(__name__)
@@ -133,7 +133,7 @@ INSTRUCTIONAL_HTML = """
 </head>
 <body>
   <div class="headline">PRESS &amp; HOLD!</div>
-  <div class="sub">Hold to open the link</div>
+  <div class="sub">Click "Open link"</div>
   <div class="hold-wrapper">
     <div class="glow-ring"></div>
     <button class="hold-btn" id="holdBtn">
@@ -202,18 +202,12 @@ INSTRUCTIONAL_HTML = """
   function unlock() {
     holding = false;
     holdBtn.classList.remove('pressing');
-    status.textContent = 'Unlocked \u2713';
+    status.textContent = 'Tap "Open link" \u2191';
     status.className   = 'status done';
 
-    var ua = navigator.userAgent || '';
-
-    if (/android/i.test(ua)) {
-      // Android: intent:// forces Chrome to open — routes through our own domain first
-      window.location.href = 'intent://ffionamorgan.com/go#Intent;scheme=https;package=com.android.chrome;end';
-    } else {
-      // iOS: go through our own /go route — TikTok iOS hands off unknown pages to Safari
-      window.location.href = 'https://ffionamorgan.com/go';
-    }
+    // window.open triggers TikTok's native "Open link" popup
+    // which the user taps — and TikTok opens it in Safari/Chrome automatically
+    window.open('https://link.me/ffionamorgan0', '_blank');
   }
 
   function spawnRipple(e) {
@@ -244,7 +238,7 @@ def is_tiktok_inapp(user_agent):
     return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
 
 
-# Root route — TikTok users see hold button, everyone else goes straight to link.me
+# Root route - TikTok users see hold button, everyone else goes straight to link.me
 @app.route('/')
 def root():
     user_agent = request.headers.get('User-Agent')
@@ -252,13 +246,6 @@ def root():
         return INSTRUCTIONAL_HTML
     else:
         return redirect(FINAL_URL)
-
-
-# /go route — this is where the hold button sends people after unlocking
-# By the time they hit this, they are already in Safari/Chrome, so just redirect
-@app.route('/go')
-def go():
-    return redirect(FINAL_URL)
 
 
 # Keep the dynamic route in case you ever use other usernames
