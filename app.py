@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, Response
 import os
 
 app = Flask(__name__)
@@ -8,6 +8,8 @@ TIKTOK_UA_PATTERNS = [
     'tiktok', 'musical_ly', 'bytelocale', 'ttwebview',
     'bytedancewebview', 'jssdk', 'cronet'
 ]
+
+FINAL_URL = 'https://link.me/ffionamorgan0'
 
 INSTRUCTIONAL_HTML = """
 <!DOCTYPE html>
@@ -203,15 +205,14 @@ INSTRUCTIONAL_HTML = """
     status.textContent = 'Unlocked \u2713';
     status.className   = 'status done';
 
-    var TARGET = 'https://link.me/ffionamorgan0';
     var ua = navigator.userAgent || '';
 
     if (/android/i.test(ua)) {
-      // Android: intent:// forces Chrome to open instead of TikTok webview
-      window.location.href = 'intent://link.me/ffionamorgan0#Intent;scheme=https;package=com.android.chrome;end';
+      // Android: intent:// forces Chrome to open — routes through our own domain first
+      window.location.href = 'intent://ffionamorgan.com/go#Intent;scheme=https;package=com.android.chrome;end';
     } else {
-      // iOS: direct navigation — TikTok iOS hands off to Safari automatically
-      window.location.href = TARGET;
+      // iOS: go through our own /go route — TikTok iOS hands off unknown pages to Safari
+      window.location.href = 'https://ffionamorgan.com/go';
     }
   }
 
@@ -243,14 +244,21 @@ def is_tiktok_inapp(user_agent):
     return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
 
 
-# Root route - this is what people hit when they visit www.ffionamorgan.com directly
+# Root route — TikTok users see hold button, everyone else goes straight to link.me
 @app.route('/')
 def root():
     user_agent = request.headers.get('User-Agent')
     if is_tiktok_inapp(user_agent):
         return INSTRUCTIONAL_HTML
     else:
-        return redirect('https://link.me/ffionamorgan0')
+        return redirect(FINAL_URL)
+
+
+# /go route — this is where the hold button sends people after unlocking
+# By the time they hit this, they are already in Safari/Chrome, so just redirect
+@app.route('/go')
+def go():
+    return redirect(FINAL_URL)
 
 
 # Keep the dynamic route in case you ever use other usernames
@@ -260,7 +268,7 @@ def handle_request(username):
     if is_tiktok_inapp(user_agent):
         return INSTRUCTIONAL_HTML
     else:
-        return redirect('https://link.me/ffionamorgan0')
+        return redirect(FINAL_URL)
 
 
 if __name__ == '__main__':
