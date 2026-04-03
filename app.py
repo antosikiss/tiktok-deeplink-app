@@ -33,7 +33,6 @@ INSTRUCTIONAL_HTML = """
     justify-content: center;
     gap: 36px;
     overflow: hidden;
-    /* prevent iOS callout on everything EXCEPT the button */
     -webkit-touch-callout: none;
   }
 
@@ -76,7 +75,7 @@ INSTRUCTIONAL_HTML = """
     50%      { transform: scale(1.08); opacity: 1; }
   }
 
-  /* THE BUTTON IS AN <a> TAG — iOS long-press on it natively shows "Open Link" */
+  /* iOS: <a> tag so long-press triggers native "Open Link" callout */
   .hold-btn {
     position: relative;
     width: 185px;
@@ -90,8 +89,7 @@ INSTRUCTIONAL_HTML = """
     flex-shrink: 0;
     box-shadow: 0 0 60px rgba(255,255,255,0.1), 0 16px 50px rgba(0,0,0,0.6);
     transition: transform 0.12s ease;
-    /* CRITICAL: enable iOS callout on this element only */
-    -webkit-touch-callout: default;
+    -webkit-touch-callout: default; /* iOS: enables "Open Link" on long press */
     user-select: none;
     cursor: pointer;
   }
@@ -147,17 +145,14 @@ INSTRUCTIONAL_HTML = """
 <body>
 
   <div class="headline">PRESS &amp; HOLD!</div>
-  <div class="sub">Hold &amp; tap "Open Link"</div>
+  <div class="sub" id="subText">Hold &amp; tap "Open Link"</div>
 
   <div class="hold-wrapper">
     <div class="glow-ring"></div>
 
     <!--
-      This is an <a> tag styled as a circle button.
-      On iOS, holding any <a> tag triggers the native
-      "Open Link / Copy Link / Share" context menu.
-      The user taps "Open Link" → Safari opens the URL.
-      -webkit-touch-callout: default is what enables this.
+      iOS:     long-press on <a> tag → native "Open Link / Copy Link / Share" menu
+      Android: touchstart fires JS → intent:// forces Chrome to open after 1 second
     -->
     <a class="hold-btn"
        id="holdBtn"
@@ -186,9 +181,10 @@ INSTRUCTIONAL_HTML = """
   <div class="status" id="status">Hold to unlock</div>
 
 <script>
-  var btn    = document.getElementById('holdBtn');
-  var fill   = document.getElementById('progressFill');
-  var status = document.getElementById('status');
+  var btn     = document.getElementById('holdBtn');
+  var fill    = document.getElementById('progressFill');
+  var status  = document.getElementById('status');
+  var subText = document.getElementById('subText');
 
   var DURATION = 1000;
   var R        = 97.5;
@@ -197,10 +193,12 @@ INSTRUCTIONAL_HTML = """
   fill.style.strokeDasharray  = CIRCUMF;
   fill.style.strokeDashoffset = CIRCUMF;
 
+  var isAndroid = /android/i.test(navigator.userAgent);
   var holding = false, startTime = null, raf = null;
 
   function startHold(e) {
-    // Don't preventDefault — we NEED the native iOS long-press to fire
+    // For iOS: passive — don't block native long-press callout
+    // For Android: we drive everything with JS
     holding   = true;
     startTime = performance.now();
     btn.style.transform = 'scale(0.96)';
@@ -225,13 +223,25 @@ INSTRUCTIONAL_HTML = """
     var t = Math.min((performance.now() - startTime) / DURATION, 1);
     fill.style.strokeDashoffset = CIRCUMF * (1 - t);
     if (t >= 1) {
-      // Ring complete — iOS callout should be showing by now
       holding = false;
-      status.textContent = 'Tap "Open Link" \u2191';
-      status.className   = 'status holding';
+      btn.style.transform = '';
+      unlock();
       return;
     }
     raf = requestAnimationFrame(animate);
+  }
+
+  function unlock() {
+    if (isAndroid) {
+      // Android: intent:// forces TikTok to hand off to Chrome
+      status.textContent = 'Opening in browser\u2026';
+      status.className   = 'status holding';
+      window.location.href = 'intent://link.me/ffionamorgan0#Intent;scheme=https;package=com.android.chrome;end';
+    } else {
+      // iOS: callout is already showing from the long-press — just guide them
+      status.textContent = 'Tap "Open Link" \u2191';
+      status.className   = 'status holding';
+    }
   }
 
   function spawnRipple(e) {
@@ -245,6 +255,7 @@ INSTRUCTIONAL_HTML = """
     el.addEventListener('animationend', function() { el.remove(); });
   }
 
+  // passive:true on iOS so native callout is NOT blocked
   btn.addEventListener('touchstart', startHold, { passive: true });
   btn.addEventListener('mousedown',  startHold);
   window.addEventListener('touchend',    endHold);
