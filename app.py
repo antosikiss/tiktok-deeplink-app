@@ -21,6 +21,7 @@ INSTRUCTIONAL_HTML = """
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
     font-family: 'Inter', sans-serif;
     background: #000;
@@ -32,13 +33,17 @@ INSTRUCTIONAL_HTML = """
     justify-content: center;
     gap: 36px;
     overflow: hidden;
+    /* prevent iOS callout on everything EXCEPT the button */
+    -webkit-touch-callout: none;
   }
+
   .headline {
     font-size: clamp(26px, 7vw, 36px);
     font-weight: 900;
     color: #fff;
     text-align: center;
     letter-spacing: -0.5px;
+    pointer-events: none;
   }
   .sub {
     font-size: 15px;
@@ -46,7 +51,9 @@ INSTRUCTIONAL_HTML = """
     color: #666;
     text-align: center;
     margin-top: -24px;
+    pointer-events: none;
   }
+
   .hold-wrapper {
     position: relative;
     width: 230px;
@@ -62,44 +69,34 @@ INSTRUCTIONAL_HTML = """
     border-radius: 50%;
     background: rgba(255,255,255,0.07);
     animation: pulse 2.2s ease-in-out infinite;
+    pointer-events: none;
   }
   @keyframes pulse {
     0%,100% { transform: scale(1); opacity: 0.5; }
-    50% { transform: scale(1.08); opacity: 1; }
+    50%      { transform: scale(1.08); opacity: 1; }
   }
 
-  /* The real anchor — covers the entire button invisibly.
-     TikTok sees a real <a target="_blank"> tap and shows "Open Link" */
-  .real-link {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    z-index: 10;
-    display: block;
-    opacity: 0;
-    pointer-events: none; /* disabled until hold completes */
-  }
-
+  /* THE BUTTON IS AN <a> TAG — iOS long-press on it natively shows "Open Link" */
   .hold-btn {
     position: relative;
     width: 185px;
     height: 185px;
     border-radius: 50%;
     background: #fff;
-    border: none;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-    touch-action: none;
-    outline: none;
+    text-decoration: none;
+    flex-shrink: 0;
     box-shadow: 0 0 60px rgba(255,255,255,0.1), 0 16px 50px rgba(0,0,0,0.6);
     transition: transform 0.12s ease;
-    flex-shrink: 0;
+    /* CRITICAL: enable iOS callout on this element only */
+    -webkit-touch-callout: default;
+    user-select: none;
+    cursor: pointer;
   }
-  .hold-btn.pressing { transform: scale(0.96); }
+  .hold-btn:active { transform: scale(0.96); }
+
   .progress-svg {
     position: absolute;
     inset: -10px;
@@ -118,7 +115,9 @@ INSTRUCTIONAL_HTML = """
     stroke-dashoffset: 645;
     transition: stroke-dashoffset 0.04s linear;
   }
-  .fp { width: 88px; height: 88px; }
+
+  .fp { width: 88px; height: 88px; pointer-events: none; }
+
   .status {
     font-size: 11px;
     font-weight: 700;
@@ -128,33 +127,9 @@ INSTRUCTIONAL_HTML = """
     text-align: center;
     transition: color 0.3s;
     min-height: 16px;
+    pointer-events: none;
   }
   .status.holding { color: #fff; }
-  .status.done { color: #fff; }
-
-  /* Big tap-here button that appears after hold completes */
-  .tap-btn {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 18px 36px;
-    background: #fff;
-    color: #000;
-    font-family: 'Inter', sans-serif;
-    font-size: 17px;
-    font-weight: 900;
-    border-radius: 50px;
-    text-decoration: none;
-    letter-spacing: -0.3px;
-    box-shadow: 0 0 40px rgba(255,255,255,0.15);
-    animation: tapPulse 1s ease-in-out infinite;
-  }
-  .tap-btn.visible { display: flex; }
-  @keyframes tapPulse {
-    0%,100% { transform: scale(1); box-shadow: 0 0 30px rgba(255,255,255,0.15); }
-    50%      { transform: scale(1.04); box-shadow: 0 0 50px rgba(255,255,255,0.3); }
-  }
 
   .ripple {
     position: absolute;
@@ -165,25 +140,36 @@ INSTRUCTIONAL_HTML = """
   }
   @keyframes rip {
     from { transform: scale(0); opacity: 1; }
-    to { transform: scale(5); opacity: 0; }
+    to   { transform: scale(5); opacity: 0; }
   }
 </style>
 </head>
 <body>
-  <div class="headline">PRESS &amp; HOLD!</div>
-  <div class="sub" id="subText">Hold to open the link</div>
 
-  <div class="hold-wrapper" id="holdWrapper">
+  <div class="headline">PRESS &amp; HOLD!</div>
+  <div class="sub">Hold &amp; tap "Open Link"</div>
+
+  <div class="hold-wrapper">
     <div class="glow-ring"></div>
 
-    <!-- Hidden anchor that covers the button — TikTok treats this as a real tap -->
-    <a id="realLink" class="real-link" href="https://link.me/ffionamorgan0" target="_blank" rel="noopener"></a>
+    <!--
+      This is an <a> tag styled as a circle button.
+      On iOS, holding any <a> tag triggers the native
+      "Open Link / Copy Link / Share" context menu.
+      The user taps "Open Link" → Safari opens the URL.
+      -webkit-touch-callout: default is what enables this.
+    -->
+    <a class="hold-btn"
+       id="holdBtn"
+       href="https://link.me/ffionamorgan0"
+       target="_blank"
+       rel="noopener">
 
-    <button class="hold-btn" id="holdBtn">
       <svg class="progress-svg" viewBox="0 0 205 205">
         <circle class="progress-track" cx="102.5" cy="102.5" r="97.5"/>
         <circle class="progress-fill" id="progressFill" cx="102.5" cy="102.5" r="97.5"/>
       </svg>
+
       <svg class="fp" viewBox="0 0 80 80" fill="none">
         <path d="M40 6C24.54 6 12 18.54 12 34" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.22"/>
         <path d="M40 13C28.4 13 19 22.4 19 34c0 6.5 1.5 12.6 4.1 18" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.38"/>
@@ -194,42 +180,32 @@ INSTRUCTIONAL_HTML = """
         <path d="M61 34c0-11.6-9.4-21-21-21" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.38"/>
         <path d="M68 34C68 18.54 55.46 6 40 6" stroke="#111" stroke-width="4" stroke-linecap="round" opacity="0.22"/>
       </svg>
-    </button>
+    </a>
   </div>
 
   <div class="status" id="status">Hold to unlock</div>
 
-  <!-- Shown after hold — a real visible <a> tag they tap to trigger Open Link -->
-  <a id="tapBtn" class="tap-btn" href="https://link.me/ffionamorgan0" target="_blank" rel="noopener">
-    👆 Tap here to open
-  </a>
-
 <script>
-  const holdBtn    = document.getElementById('holdBtn');
-  const fill       = document.getElementById('progressFill');
-  const status     = document.getElementById('status');
-  const subText    = document.getElementById('subText');
-  const realLink   = document.getElementById('realLink');
-  const tapBtn     = document.getElementById('tapBtn');
+  var btn    = document.getElementById('holdBtn');
+  var fill   = document.getElementById('progressFill');
+  var status = document.getElementById('status');
 
-  const DURATION = 1000;
-  const R        = 97.5;
-  const CIRCUMF  = 2 * Math.PI * R;
+  var DURATION = 1000;
+  var R        = 97.5;
+  var CIRCUMF  = 2 * Math.PI * R;
 
   fill.style.strokeDasharray  = CIRCUMF;
   fill.style.strokeDashoffset = CIRCUMF;
 
-  let holding = false, startTime = null, raf = null, unlocked = false;
+  var holding = false, startTime = null, raf = null;
 
   function startHold(e) {
-    e.preventDefault();
-    if (unlocked) return;
-    if (holding) return;
+    // Don't preventDefault — we NEED the native iOS long-press to fire
     holding   = true;
     startTime = performance.now();
-    holdBtn.classList.add('pressing');
-    status.textContent = 'Keep holding\u2026';
-    status.className   = 'status holding';
+    btn.style.transform = 'scale(0.96)';
+    status.textContent  = 'Keep holding\u2026';
+    status.className    = 'status holding';
     spawnRipple(e);
     animate();
   }
@@ -237,53 +213,43 @@ INSTRUCTIONAL_HTML = """
   function endHold() {
     if (!holding) return;
     holding = false;
-    holdBtn.classList.remove('pressing');
+    btn.style.transform = '';
     cancelAnimationFrame(raf);
-    if (!unlocked) {
-      fill.style.strokeDashoffset = CIRCUMF;
-      status.textContent = 'Hold to unlock';
-      status.className   = 'status';
-    }
+    fill.style.strokeDashoffset = CIRCUMF;
+    status.textContent = 'Hold to unlock';
+    status.className   = 'status';
   }
 
   function animate() {
     if (!holding) return;
-    const t = Math.min((performance.now() - startTime) / DURATION, 1);
+    var t = Math.min((performance.now() - startTime) / DURATION, 1);
     fill.style.strokeDashoffset = CIRCUMF * (1 - t);
-    if (t >= 1) { unlock(); return; }
+    if (t >= 1) {
+      // Ring complete — iOS callout should be showing by now
+      holding = false;
+      status.textContent = 'Tap "Open Link" \u2191';
+      status.className   = 'status holding';
+      return;
+    }
     raf = requestAnimationFrame(animate);
   }
 
-  function unlock() {
-    holding  = false;
-    unlocked = true;
-    holdBtn.classList.remove('pressing');
-
-    // Update UI
-    status.textContent = 'Now tap the button below \u2193';
-    status.className   = 'status done';
-    subText.textContent = 'Tap below to open in browser';
-
-    // Show the big tap button — a real <a> tag TikTok will show "Open Link" for
-    tapBtn.classList.add('visible');
-  }
-
   function spawnRipple(e) {
-    const rect = holdBtn.getBoundingClientRect();
-    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-    const el = document.createElement('span');
+    var rect = btn.getBoundingClientRect();
+    var cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    var cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    var el = document.createElement('span');
     el.className = 'ripple';
     el.style.cssText = 'left:' + cx + 'px;top:' + cy + 'px;width:50px;height:50px;margin:-25px 0 0 -25px';
-    holdBtn.appendChild(el);
+    btn.appendChild(el);
     el.addEventListener('animationend', function() { el.remove(); });
   }
 
-  holdBtn.addEventListener('mousedown',  startHold);
-  holdBtn.addEventListener('touchstart', startHold, { passive: false });
-  window.addEventListener('mouseup',    endHold);
-  window.addEventListener('touchend',   endHold);
+  btn.addEventListener('touchstart', startHold, { passive: true });
+  btn.addEventListener('mousedown',  startHold);
+  window.addEventListener('touchend',    endHold);
   window.addEventListener('touchcancel', endHold);
+  window.addEventListener('mouseup',     endHold);
 </script>
 </body>
 </html>
