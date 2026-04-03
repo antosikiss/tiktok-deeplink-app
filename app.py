@@ -3,6 +3,7 @@ import os
 
 app = Flask(__name__)
 
+# TikTok in-app browser detection patterns (case-insensitive)
 TIKTOK_UA_PATTERNS = [
     'tiktok', 'musical_ly', 'bytelocale', 'ttwebview',
     'bytedancewebview', 'jssdk', 'cronet'
@@ -172,7 +173,7 @@ INSTRUCTIONAL_HTML = """
     holding   = true;
     startTime = performance.now();
     holdBtn.classList.add('pressing');
-    status.textContent = 'Keep holding…';
+    status.textContent = 'Keep holding\u2026';
     status.className   = 'status holding';
     spawnRipple(e);
     animate();
@@ -199,7 +200,7 @@ INSTRUCTIONAL_HTML = """
   function unlock() {
     holding = false;
     holdBtn.classList.remove('pressing');
-    status.textContent = 'Unlocked ✓';
+    status.textContent = 'Unlocked \u2713';
     status.className   = 'status done';
 
     var TARGET = 'https://link.me/ffionamorgan0';
@@ -207,10 +208,9 @@ INSTRUCTIONAL_HTML = """
 
     if (/android/i.test(ua)) {
       // Android: intent:// forces Chrome to open instead of TikTok webview
-      window.location.href = 'intent://' + TARGET.replace('https://', '') +
-        '#Intent;scheme=https;package=com.android.chrome;end';
+      window.location.href = 'intent://link.me/ffionamorgan0#Intent;scheme=https;package=com.android.chrome;end';
     } else {
-      // iOS: direct navigation — TikTok iOS opens this in Safari automatically
+      // iOS: direct navigation — TikTok iOS hands off to Safari automatically
       window.location.href = TARGET;
     }
   }
@@ -221,9 +221,9 @@ INSTRUCTIONAL_HTML = """
     const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
     const el = document.createElement('span');
     el.className = 'ripple';
-    el.style.cssText = `left:${cx}px;top:${cy}px;width:50px;height:50px;margin:-25px 0 0 -25px`;
+    el.style.cssText = 'left:' + cx + 'px;top:' + cy + 'px;width:50px;height:50px;margin:-25px 0 0 -25px';
     holdBtn.appendChild(el);
-    el.addEventListener('animationend', () => el.remove());
+    el.addEventListener('animationend', function() { el.remove(); });
   }
 
   holdBtn.addEventListener('mousedown',  startHold);
@@ -243,6 +243,7 @@ def is_tiktok_inapp(user_agent):
     return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
 
 
+# Root route - this is what people hit when they visit www.ffionamorgan.com directly
 @app.route('/')
 def root():
     user_agent = request.headers.get('User-Agent')
@@ -252,6 +253,7 @@ def root():
         return redirect('https://link.me/ffionamorgan0')
 
 
+# Keep the dynamic route in case you ever use other usernames
 @app.route('/<username>')
 def handle_request(username):
     user_agent = request.headers.get('User-Agent')
