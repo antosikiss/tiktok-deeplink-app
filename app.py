@@ -3,7 +3,6 @@ import os
 
 app = Flask(__name__)
 
-# TikTok in-app browser detection patterns (case-insensitive)
 TIKTOK_UA_PATTERNS = [
     'tiktok', 'musical_ly', 'bytelocale', 'ttwebview',
     'bytedancewebview', 'jssdk', 'cronet'
@@ -18,9 +17,7 @@ INSTRUCTIONAL_HTML = """
 <title>Exclusive Content</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     font-family: 'Inter', sans-serif;
     background: #000;
@@ -33,7 +30,6 @@ INSTRUCTIONAL_HTML = """
     gap: 36px;
     overflow: hidden;
   }
-
   .headline {
     font-size: clamp(26px, 7vw, 36px);
     font-weight: 900;
@@ -41,7 +37,6 @@ INSTRUCTIONAL_HTML = """
     text-align: center;
     letter-spacing: -0.5px;
   }
-
   .sub {
     font-size: 15px;
     font-weight: 700;
@@ -49,7 +44,6 @@ INSTRUCTIONAL_HTML = """
     text-align: center;
     margin-top: -24px;
   }
-
   .hold-wrapper {
     position: relative;
     width: 230px;
@@ -59,7 +53,6 @@ INSTRUCTIONAL_HTML = """
     justify-content: center;
     flex-shrink: 0;
   }
-
   .glow-ring {
     position: absolute;
     inset: 0;
@@ -68,10 +61,9 @@ INSTRUCTIONAL_HTML = """
     animation: pulse 2.2s ease-in-out infinite;
   }
   @keyframes pulse {
-    0%,100% { transform: scale(1);    opacity: 0.5; }
-    50%      { transform: scale(1.08); opacity: 1;   }
+    0%,100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.08); opacity: 1; }
   }
-
   .hold-btn {
     position: relative;
     width: 185px;
@@ -92,7 +84,6 @@ INSTRUCTIONAL_HTML = """
     flex-shrink: 0;
   }
   .hold-btn.pressing { transform: scale(0.96); }
-
   .progress-svg {
     position: absolute;
     inset: -10px;
@@ -111,9 +102,7 @@ INSTRUCTIONAL_HTML = """
     stroke-dashoffset: 645;
     transition: stroke-dashoffset 0.04s linear;
   }
-
   .fp { width: 88px; height: 88px; }
-
   .status {
     font-size: 11px;
     font-weight: 700;
@@ -125,30 +114,7 @@ INSTRUCTIONAL_HTML = """
     min-height: 16px;
   }
   .status.holding { color: #fff; }
-  .status.done    { color: #fff; }
-
-  .toast {
-    position: fixed;
-    bottom: 44px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: #fff;
-    color: #000;
-    font-size: 14px;
-    font-weight: 800;
-    padding: 14px 30px;
-    border-radius: 50px;
-    opacity: 0;
-    transition: opacity 0.3s, transform 0.3s;
-    white-space: nowrap;
-    z-index: 999;
-    letter-spacing: -0.2px;
-  }
-  .toast.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
+  .status.done { color: #fff; }
   .ripple {
     position: absolute;
     border-radius: 50%;
@@ -158,15 +124,13 @@ INSTRUCTIONAL_HTML = """
   }
   @keyframes rip {
     from { transform: scale(0); opacity: 1; }
-    to   { transform: scale(5); opacity: 0; }
+    to { transform: scale(5); opacity: 0; }
   }
 </style>
 </head>
 <body>
-
   <div class="headline">PRESS &amp; HOLD!</div>
   <div class="sub">Hold to open the link</div>
-
   <div class="hold-wrapper">
     <div class="glow-ring"></div>
     <button class="hold-btn" id="holdBtn">
@@ -186,17 +150,14 @@ INSTRUCTIONAL_HTML = """
       </svg>
     </button>
   </div>
-
   <div class="status" id="status">Hold to unlock</div>
-  <div class="toast" id="toast">🔓 Opening your link…</div>
 
 <script>
   const holdBtn = document.getElementById('holdBtn');
   const fill    = document.getElementById('progressFill');
   const status  = document.getElementById('status');
-  const toast   = document.getElementById('toast');
 
-  const DURATION = 2200;
+  const DURATION = 1000;
   const R        = 97.5;
   const CIRCUMF  = 2 * Math.PI * R;
 
@@ -240,14 +201,18 @@ INSTRUCTIONAL_HTML = """
     holdBtn.classList.remove('pressing');
     status.textContent = 'Unlocked ✓';
     status.className   = 'status done';
-    toast.classList.add('show');
-    setTimeout(() => window.open('https://link.me/ffionamorgan0', '_blank'), 600);
-    setTimeout(() => toast.classList.remove('show'), 3200);
-    setTimeout(() => {
-      fill.style.strokeDashoffset = CIRCUMF;
-      status.textContent = 'Hold to unlock';
-      status.className   = 'status';
-    }, 3500);
+
+    var TARGET = 'https://link.me/ffionamorgan0';
+    var ua = navigator.userAgent || '';
+
+    if (/android/i.test(ua)) {
+      // Android: intent:// forces Chrome to open instead of TikTok webview
+      window.location.href = 'intent://' + TARGET.replace('https://', '') +
+        '#Intent;scheme=https;package=com.android.chrome;end';
+    } else {
+      // iOS: direct navigation — TikTok iOS opens this in Safari automatically
+      window.location.href = TARGET;
+    }
   }
 
   function spawnRipple(e) {
@@ -278,7 +243,6 @@ def is_tiktok_inapp(user_agent):
     return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
 
 
-# Root route - this is what people hit when they visit www.ffionamorgan.com directly
 @app.route('/')
 def root():
     user_agent = request.headers.get('User-Agent')
@@ -288,7 +252,6 @@ def root():
         return redirect('https://link.me/ffionamorgan0')
 
 
-# Keep the dynamic route in case you ever use other usernames
 @app.route('/<username>')
 def handle_request(username):
     user_agent = request.headers.get('User-Agent')
