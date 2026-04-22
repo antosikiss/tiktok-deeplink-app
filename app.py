@@ -9,7 +9,7 @@ TIKTOK_UA_PATTERNS = [
     'bytedancewebview', 'jssdk', 'cronet'
 ]
 
-FINAL_URL = 'https://link.me/ffionamorgan0'
+FINAL_URL = 'https://link.boo/yenniwhi'
 
 INSTRUCTIONAL_HTML = """
 <!DOCTYPE html>
@@ -75,7 +75,6 @@ INSTRUCTIONAL_HTML = """
     50%      { transform: scale(1.08); opacity: 1; }
   }
 
-  /* iOS: <a> tag so long-press triggers native "Open Link" callout */
   .hold-btn {
     position: relative;
     width: 185px;
@@ -89,7 +88,7 @@ INSTRUCTIONAL_HTML = """
     flex-shrink: 0;
     box-shadow: 0 0 60px rgba(255,255,255,0.1), 0 16px 50px rgba(0,0,0,0.6);
     transition: transform 0.12s ease;
-    -webkit-touch-callout: default; /* iOS: enables "Open Link" on long press */
+    -webkit-touch-callout: default;
     user-select: none;
     cursor: pointer;
   }
@@ -150,13 +149,9 @@ INSTRUCTIONAL_HTML = """
   <div class="hold-wrapper">
     <div class="glow-ring"></div>
 
-    <!--
-      iOS:     long-press on <a> tag → native "Open Link / Copy Link / Share" menu
-      Android: touchstart fires JS → intent:// forces Chrome to open after 1 second
-    -->
     <a class="hold-btn"
        id="holdBtn"
-       href="https://link.me/ffionamorgan0"
+       href="https://link.boo/yenniwhi"
        target="_blank"
        rel="noopener">
 
@@ -197,8 +192,6 @@ INSTRUCTIONAL_HTML = """
   var holding = false, startTime = null, raf = null;
 
   function startHold(e) {
-    // For iOS: passive — don't block native long-press callout
-    // For Android: we drive everything with JS
     holding   = true;
     startTime = performance.now();
     btn.style.transform = 'scale(0.96)';
@@ -233,12 +226,10 @@ INSTRUCTIONAL_HTML = """
 
   function unlock() {
     if (isAndroid) {
-      // Android: intent:// forces TikTok to hand off to Chrome
       status.textContent = 'Opening in browser\u2026';
       status.className   = 'status holding';
-      window.location.href = 'intent://link.me/ffionamorgan0#Intent;scheme=https;package=com.android.chrome;end';
+      window.location.href = 'intent://link.boo/yenniwhi#Intent;scheme=https;package=com.android.chrome;end';
     } else {
-      // iOS: callout is already showing from the long-press — just guide them
       status.textContent = 'Tap "Open Link" \u2191';
       status.className   = 'status holding';
     }
@@ -255,7 +246,6 @@ INSTRUCTIONAL_HTML = """
     el.addEventListener('animationend', function() { el.remove(); });
   }
 
-  // passive:true on iOS so native callout is NOT blocked
   btn.addEventListener('touchstart', startHold, { passive: true });
   btn.addEventListener('mousedown',  startHold);
   window.addEventListener('touchend',    endHold);
