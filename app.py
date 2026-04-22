@@ -119,4 +119,76 @@ INSTRUCTIONAL_HTML = """
             gap: 6px;
         }
         .footer-logo {
-            width: 18p
+            width: 18px;
+            height: 18px;
+            background: #6b46c1;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-circle">
+        <div class="arrow-wrapper">
+            <div class="arrow">→</div>
+        </div>
+    </div>
+
+    <div class="content">
+        <h1>To access the link,<br>follow these 2 simple<br>steps:</h1>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-icon">👆</div>
+                Click the ... menu in the top right
+            </div>
+            <div class="step">
+                <div class="step-icon">↗️</div>
+                Select "Open in browser"
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-logo">□</div>
+        Powered by GetAllMyLinks
+    </div>
+</body>
+</html>
+"""
+
+def is_tiktok_inapp(user_agent):
+    if not user_agent:
+        return False
+    ua_lower = user_agent.lower()
+    return any(pattern in ua_lower for pattern in TIKTOK_UA_PATTERNS)
+
+
+# Root route - this is what people hit when they visit www.ffionamorgan.com directly
+@app.route('/')
+def root():
+    user_agent = request.headers.get('User-Agent')
+    if is_tiktok_inapp(user_agent):
+        return INSTRUCTIONAL_HTML
+    else:
+        return redirect('https://link.me/ffionamorgan0')
+
+
+# Keep the dynamic route in case you ever use other usernames
+@app.route('/<username>')
+def handle_request(username):
+    user_agent = request.headers.get('User-Agent')
+    if is_tiktok_inapp(user_agent):
+        return INSTRUCTIONAL_HTML
+    else:
+        return redirect('https://link.me/ffionamorgan0')
+
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
